@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 buildscript {
   repositories {
     mavenCentral()
@@ -52,13 +54,13 @@ configure(subprojects - project(':android')) {
       assetsFile.append(it + "\n")
     }
   }
-  compileKotlin.compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+  compileKotlin.compilerOptions.jvmTarget.set(JvmTarget.JVM_11)
 
 }
 
 subprojects {
-  version = '1.0.0'
-  ext.appName = 'kids-activities'
+  version = '0.0.1'
+  ext.appName = 'tamar'
   repositories {
     mavenCentral()
     maven { url 'https://s01.oss.sonatype.org' }
@@ -70,4 +72,4 @@ subprojects {
   }
 }
 
-eclipse.project.name = 'kids-activities' + '-parent'
+eclipse.project.name = 'tamar' + '-parent'

@@ -12,7 +12,7 @@
       tools:ignore="UnusedAttribute"
       android:theme="@style/GdxTheme">
     <activity
-        android:name="com.gadarts.ka.android.AndroidLauncher"
+        android:name="com.gadarts.tamar.android.AndroidLauncher"
         android:label="@string/app_name"
         android:screenOrientation="landscape"
         android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout"

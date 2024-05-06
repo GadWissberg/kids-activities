@@ -1,8 +1,10 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 
 android {
-  namespace "com.gadarts.ka"
+  namespace "com.gadarts.tamar"
   compileSdk 34
   sourceSets {
     main {
@@ -24,11 +26,11 @@ android {
 		}
   }
   defaultConfig {
-    applicationId 'com.gadarts.ka'
+    applicationId 'com.gadarts.tamar'
     minSdkVersion 19
     targetSdkVersion 34
     versionCode 1
-    versionName "1.0"
+    versionName "0.1"
     multiDexEnabled true
   }
   compileOptions {
@@ -43,8 +45,8 @@ android {
     }
   }
 
-  kotlin.compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
-  
+  kotlin.compilerOptions.jvmTarget.set(JvmTarget.JVM_11)
+
 }
 
 repositories {
@@ -120,7 +122,7 @@ tasks.register('run', Exec) {
   }
 
   def adb = path + "/platform-tools/adb"
-  commandLine "$adb", 'shell', 'am', 'start', '-n', 'com.gadarts.ka/com.gadarts.ka.android.AndroidLauncher'
+  commandLine "$adb", 'shell', 'am', 'start', '-n', 'com.gadarts.tamar/com.gadarts.tamar.android.AndroidLauncher'
 }
 
 eclipse.project.name = appName + "-android"
