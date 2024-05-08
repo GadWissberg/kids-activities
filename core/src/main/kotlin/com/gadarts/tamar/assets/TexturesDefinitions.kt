@@ -6,7 +6,8 @@ import com.badlogic.gdx.graphics.Texture
 enum class TexturesDefinitions(fileNames: Int = 1) : AssetDefinition<Texture> {
 
     BACKGROUND_WATER,
-    CHARACTER_RED;
+    CHARACTER_RED,
+    CARRIER_RED;
 
     private val paths = ArrayList<String>()
     private val pathFormat = "textures/%s.png"

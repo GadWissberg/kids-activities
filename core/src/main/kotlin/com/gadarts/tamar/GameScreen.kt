@@ -21,8 +21,13 @@ class GameScreen(private val assetsManager: GameAssetManager) : Screen {
         stage.addActor(screenTable)
         val gameCharacter =
             GameCharacter(assetsManager.getAssetByDefinition(TexturesDefinitions.CHARACTER_RED))
-        gameCharacter.setPosition(50F, 50F)
+        gameCharacter.setOrigin(gameCharacter.width / 2F, gameCharacter.height / 2F)
+        val carrier =
+            GameCharacter(assetsManager.getAssetByDefinition(TexturesDefinitions.CARRIER_RED))
+        gameCharacter.setPosition(50F, Gdx.graphics.height / 5F)
         stage.addActor(gameCharacter)
+        carrier.setPosition(Gdx.graphics.width - 500F, Gdx.graphics.height / 5F)
+        stage.addActor(carrier)
     }
 
     override fun render(delta: Float) {
