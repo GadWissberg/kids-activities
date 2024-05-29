@@ -5,6 +5,7 @@ import com.badlogic.gdx.InputMultiplexer
 import com.badlogic.gdx.InputProcessor
 import com.badlogic.gdx.Screen
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.InputEvent
@@ -13,7 +14,7 @@ import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable
 import com.badlogic.gdx.utils.ScreenUtils
-import com.gadarts.tamar.assets.TexturesDefinitions
+import com.gadarts.tamar.assets.TextureDefinition
 
 
 class GameScreen(private val assetsManager: GameAssetManager) : Screen, InputProcessor {
@@ -27,21 +28,67 @@ class GameScreen(private val assetsManager: GameAssetManager) : Screen, InputPro
         val screenTable = Table()
         screenTable.setSize(Gdx.graphics.width.toFloat(), Gdx.graphics.height.toFloat())
         screenTable.background =
-            TextureRegionDrawable(assetsManager.getAssetByDefinition(TexturesDefinitions.BACKGROUND_WATER))
+            TextureRegionDrawable(assetsManager.getAssetByDefinition(TextureDefinition.BACKGROUND_WATER))
         stage.addActor(screenTable)
-        val gameCharacter = addGameCharacter()
-        gameCharacter.setOrigin(gameCharacter.width / 2F, gameCharacter.height / 2F)
-        carrier =
-            GameCharacter(assetsManager.getAssetByDefinition(TexturesDefinitions.CARRIER_RED))
-        gameCharacter.setPosition(50F, Gdx.graphics.height / 5F)
-        carrier.setPosition(Gdx.graphics.width - 500F, Gdx.graphics.height / 5F)
-        stage.addActor(carrier)
+        val colors = mutableListOf(Color.RED, Color.ORANGE, Color.PINK, Color.GREEN)
+        colors.removeAt(MathUtils.random(colors.size - 1))
+        val colorsPairs = mapOf(
+            Color.RED to
+                Pair(
+                    TextureDefinition.CHARACTER_RED,
+                    TextureDefinition.CARRIER_RED
+                ),
+            Color.ORANGE to Pair(
+                TextureDefinition.CHARACTER_ORANGE,
+                TextureDefinition.CARRIER_ORANGE
+            ),
+            Color.PINK to
+                Pair(
+                    TextureDefinition.CHARACTER_PINK,
+                    TextureDefinition.CARRIER_PINK
+                ),
+            Color.GREEN to Pair(
+                TextureDefinition.CHARACTER_GREEN,
+                TextureDefinition.CARRIER_GREEN
+            )
+        )
+        colors.shuffle()
+        for (i in 0 until colors.size) {
+            addGameCharacter(
+                Gdx.graphics.height * (2F + i * 2.5F) / 9F,
+                colorsPairs,
+                colors[i]
+            )
+        }
+        colors.shuffle()
+        for (i in 0 until colors.size) {
+            addCarrier(
+                colorsPairs[colors[i]]!!.second,
+                Gdx.graphics.height * (2F + i * 2.5F) / 9F
+            )
+        }
         Gdx.input.inputProcessor = InputMultiplexer(this, stage)
     }
 
-    private fun addGameCharacter(): GameCharacter {
+    private fun addCarrier(
+        textureDefinition: TextureDefinition,
+        y: Float,
+    ) {
+        val texture = assetsManager.getAssetByDefinition(textureDefinition)
+        carrier =
+            GameCharacter(texture)
+        carrier.setPosition(Gdx.graphics.width - 500F, y - texture.height / 2F)
+        stage.addActor(carrier)
+    }
+
+    private fun addGameCharacter(
+        y: Float,
+        colors: Map<Color, Pair<TextureDefinition, TextureDefinition>>,
+        color: Color
+    ): GameCharacter {
+        val texture = assetsManager.getAssetByDefinition(colors[color]!!.first)
         val gameCharacter =
-            GameCharacter(assetsManager.getAssetByDefinition(TexturesDefinitions.CHARACTER_RED))
+            GameCharacter(texture)
         gameCharacter.addListener(object : InputListener() {
             override fun touchDown(
                 event: InputEvent?,
@@ -56,6 +103,9 @@ class GameScreen(private val assetsManager: GameAssetManager) : Screen, InputPro
             }
         })
         stage.addActor(gameCharacter)
+        gameCharacter.setPosition(
+            75F, y - texture.height / 2F
+        )
         return gameCharacter
     }
 
