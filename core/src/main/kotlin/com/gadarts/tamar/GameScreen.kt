@@ -18,9 +18,11 @@ import com.gadarts.tamar.assets.TextureDefinition
 
 
 class GameScreen(private val assetsManager: GameAssetManager) : Screen, InputProcessor {
-    private lateinit var carrier: GameCharacter
+    private lateinit var colorsPairs: Map<Color, Pair<TextureDefinition, TextureDefinition>>
+    private lateinit var colors: MutableList<Color>
+    private val carriers = HashMap<Color, GameCharacter>()
     private var draggedPointer: Int = -1
-    private var draggedCharacter: GameCharacter? = null
+    private var draggedCharacter: DraggedCharacter? = null
     private lateinit var stage: Stage
 
     override fun show() {
@@ -30,9 +32,9 @@ class GameScreen(private val assetsManager: GameAssetManager) : Screen, InputPro
         screenTable.background =
             TextureRegionDrawable(assetsManager.getAssetByDefinition(TextureDefinition.BACKGROUND_WATER))
         stage.addActor(screenTable)
-        val colors = mutableListOf(Color.RED, Color.ORANGE, Color.PINK, Color.GREEN)
+        colors = mutableListOf(Color.RED, Color.ORANGE, Color.PINK, Color.GREEN)
         colors.removeAt(MathUtils.random(colors.size - 1))
-        val colorsPairs = mapOf(
+        colorsPairs = mapOf(
             Color.RED to
                 Pair(
                     TextureDefinition.CHARACTER_RED,
@@ -52,6 +54,19 @@ class GameScreen(private val assetsManager: GameAssetManager) : Screen, InputPro
                 TextureDefinition.CARRIER_GREEN
             )
         )
+        startGame()
+        Gdx.input.inputProcessor = InputMultiplexer(this, stage)
+    }
+
+    private fun startGame() {
+        colors.shuffle()
+        for (i in 0 until colors.size) {
+            addCarrier(
+                colors[i],
+                colorsPairs[colors[i]]!!.second,
+                Gdx.graphics.height * (2F + i * 2.5F) / 9F
+            )
+        }
         colors.shuffle()
         for (i in 0 until colors.size) {
             addGameCharacter(
@@ -60,24 +75,18 @@ class GameScreen(private val assetsManager: GameAssetManager) : Screen, InputPro
                 colors[i]
             )
         }
-        colors.shuffle()
-        for (i in 0 until colors.size) {
-            addCarrier(
-                colorsPairs[colors[i]]!!.second,
-                Gdx.graphics.height * (2F + i * 2.5F) / 9F
-            )
-        }
-        Gdx.input.inputProcessor = InputMultiplexer(this, stage)
     }
 
     private fun addCarrier(
+        color: Color,
         textureDefinition: TextureDefinition,
         y: Float,
     ) {
         val texture = assetsManager.getAssetByDefinition(textureDefinition)
-        carrier =
+        val carrier =
             GameCharacter(texture)
         carrier.setPosition(Gdx.graphics.width - 500F, y - texture.height / 2F)
+        carriers[color] = carrier
         stage.addActor(carrier)
     }
 
@@ -87,8 +96,7 @@ class GameScreen(private val assetsManager: GameAssetManager) : Screen, InputPro
         color: Color
     ): GameCharacter {
         val texture = assetsManager.getAssetByDefinition(colors[color]!!.first)
-        val gameCharacter =
-            GameCharacter(texture)
+        val gameCharacter = DraggedCharacter(texture, carriers[color]!!, color)
         gameCharacter.addListener(object : InputListener() {
             override fun touchDown(
                 event: InputEvent?,
@@ -166,14 +174,18 @@ class GameScreen(private val assetsManager: GameAssetManager) : Screen, InputPro
             handled = true
             if (getBoundingRectangle(draggedCharacter!!, auxRect1).overlaps(
                     getBoundingRectangle(
-                        carrier,
+                        draggedCharacter!!.carrier,
                         auxRect2
                     )
                 )
             ) {
                 draggedCharacter!!.remove()
-                carrier.remove()
+                draggedCharacter!!.carrier.remove()
+                carriers.remove(draggedCharacter!!.characterColor)
                 draggedCharacter = null
+                if (carriers.isEmpty()) {
+                    startGame()
+                }
             }
         }
         return handled
