@@ -5,12 +5,14 @@ import com.badlogic.gdx.InputMultiplexer
 import com.badlogic.gdx.InputProcessor
 import com.badlogic.gdx.Screen
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.math.Interpolation
 import com.badlogic.gdx.math.MathUtils
 import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.scenes.scene2d.Actor
 import com.badlogic.gdx.scenes.scene2d.InputEvent
 import com.badlogic.gdx.scenes.scene2d.InputListener
 import com.badlogic.gdx.scenes.scene2d.Stage
+import com.badlogic.gdx.scenes.scene2d.actions.Actions
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable
 import com.badlogic.gdx.utils.ScreenUtils
@@ -96,7 +98,13 @@ class GameScreen(private val assetsManager: GameAssetManager) : Screen, InputPro
         color: Color
     ): GameCharacter {
         val texture = assetsManager.getAssetByDefinition(colors[color]!!.first)
-        val gameCharacter = DraggedCharacter(texture, carriers[color]!!, color)
+        val gameCharacter = DraggedCharacter(
+            texture,
+            carriers[color]!!,
+            color,
+            75F,
+            y - texture.height / 2F
+        )
         gameCharacter.addListener(object : InputListener() {
             override fun touchDown(
                 event: InputEvent?,
@@ -106,14 +114,12 @@ class GameScreen(private val assetsManager: GameAssetManager) : Screen, InputPro
                 button: Int
             ): Boolean {
                 draggedCharacter = gameCharacter
+                draggedCharacter?.clearActions()
                 draggedPointer = pointer
                 return true
             }
         })
         stage.addActor(gameCharacter)
-        gameCharacter.setPosition(
-            75F, y - texture.height / 2F
-        )
         return gameCharacter
     }
 
@@ -156,6 +162,17 @@ class GameScreen(private val assetsManager: GameAssetManager) : Screen, InputPro
     }
 
     override fun touchUp(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
+        if (draggedCharacter != null) {
+            draggedCharacter!!.clearActions()
+            draggedCharacter!!.addAction(
+                Actions.moveTo(
+                    draggedCharacter!!.startX,
+                    draggedCharacter!!.startY,
+                    3F,
+                    Interpolation.exp5
+                )
+            )
+        }
         draggedCharacter = null
         return true
     }
@@ -172,7 +189,10 @@ class GameScreen(private val assetsManager: GameAssetManager) : Screen, InputPro
                 stage.height - screenY.toFloat() - draggedCharacter!!.height / 2F
             )
             handled = true
-            if (getBoundingRectangle(draggedCharacter!!, auxRect1).overlaps(
+            if (getBoundingRectangle(
+                    draggedCharacter!!,
+                    auxRect1,
+                ).overlaps(
                     getBoundingRectangle(
                         draggedCharacter!!.carrier,
                         auxRect2
@@ -192,7 +212,12 @@ class GameScreen(private val assetsManager: GameAssetManager) : Screen, InputPro
     }
 
     private fun getBoundingRectangle(actor: Actor, output: Rectangle): Rectangle {
-        return output.set(actor.x, actor.y, actor.width, actor.height)
+        return output.set(
+            actor.x + BOUNDING_BOX_PADDING,
+            actor.y + BOUNDING_BOX_PADDING,
+            actor.width - BOUNDING_BOX_PADDING,
+            actor.height - BOUNDING_BOX_PADDING
+        )
     }
 
     override fun mouseMoved(screenX: Int, screenY: Int): Boolean {
@@ -204,6 +229,7 @@ class GameScreen(private val assetsManager: GameAssetManager) : Screen, InputPro
     }
 
     companion object {
+        private const val BOUNDING_BOX_PADDING: Int = 100
         private val auxRect1 = Rectangle()
         private val auxRect2 = Rectangle()
     }
