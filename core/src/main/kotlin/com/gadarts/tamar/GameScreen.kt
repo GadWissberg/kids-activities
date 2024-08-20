@@ -13,30 +13,18 @@ import com.badlogic.gdx.scenes.scene2d.InputEvent
 import com.badlogic.gdx.scenes.scene2d.InputListener
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.actions.Actions
+import com.badlogic.gdx.scenes.scene2d.actions.SequenceAction
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable
+import com.badlogic.gdx.utils.Align
 import com.badlogic.gdx.utils.ScreenUtils
+import com.gadarts.tamar.DraggedCharacter.Companion.CARRIED_Y_BIAS
 import com.gadarts.tamar.assets.TextureDefinition
 
 
 class GameScreen(private val assetsManager: GameAssetManager) : Screen, InputProcessor {
-    private lateinit var colorsPairs: Map<Color, Pair<TextureDefinition, TextureDefinition>>
-    private lateinit var colors: MutableList<Color>
-    private val carriers = HashMap<Color, GameCharacter>()
-    private var draggedPointer: Int = -1
-    private var draggedCharacter: DraggedCharacter? = null
-    private lateinit var stage: Stage
-
-    override fun show() {
-        stage = Stage()
-        val screenTable = Table()
-        screenTable.setSize(Gdx.graphics.width.toFloat(), Gdx.graphics.height.toFloat())
-        screenTable.background =
-            TextureRegionDrawable(assetsManager.getAssetByDefinition(TextureDefinition.BACKGROUND_WATER))
-        stage.addActor(screenTable)
-        colors = mutableListOf(Color.RED, Color.ORANGE, Color.PINK, Color.GREEN)
-        colors.removeAt(MathUtils.random(colors.size - 1))
-        colorsPairs = mapOf(
+    private val colorsPairs: Map<Color, Pair<TextureDefinition, TextureDefinition>> by lazy {
+        mapOf(
             Color.RED to
                 Pair(
                     TextureDefinition.CHARACTER_RED,
@@ -56,6 +44,27 @@ class GameScreen(private val assetsManager: GameAssetManager) : Screen, InputPro
                 TextureDefinition.CARRIER_GREEN
             )
         )
+    }
+    private val colors: MutableList<Color> by lazy {
+        mutableListOf(
+            Color.RED,
+            Color.ORANGE,
+            Color.PINK,
+            Color.GREEN
+        )
+    }
+    private val carriers = HashMap<Color, GameCharacter>()
+    private var draggedPointer: Int = -1
+    private var draggedCharacter: DraggedCharacter? = null
+    private val stage: Stage by lazy { Stage() }
+
+    override fun show() {
+        val screenTable = Table()
+        screenTable.setSize(Gdx.graphics.width.toFloat(), Gdx.graphics.height.toFloat())
+        screenTable.background =
+            TextureRegionDrawable(assetsManager.getAssetByDefinition(TextureDefinition.BACKGROUND_WATER))
+        stage.addActor(screenTable)
+        colors.removeAt(MathUtils.random(colors.size - 1))
         startGame()
         Gdx.input.inputProcessor = InputMultiplexer(this, stage)
     }
@@ -89,6 +98,8 @@ class GameScreen(private val assetsManager: GameAssetManager) : Screen, InputPro
             GameCharacter(texture)
         carrier.setPosition(Gdx.graphics.width - 500F, y - texture.height / 2F)
         carriers[color] = carrier
+        carrier.zIndex = 1
+        applyIdleAnimationOnCharacter(carrier)
         stage.addActor(carrier)
     }
 
@@ -113,6 +124,7 @@ class GameScreen(private val assetsManager: GameAssetManager) : Screen, InputPro
                 pointer: Int,
                 button: Int
             ): Boolean {
+                if (gameCharacter.applied) return false
                 draggedCharacter = gameCharacter
                 draggedCharacter?.clearActions()
                 draggedPointer = pointer
@@ -120,7 +132,70 @@ class GameScreen(private val assetsManager: GameAssetManager) : Screen, InputPro
             }
         })
         stage.addActor(gameCharacter)
+        gameCharacter.zIndex = 2
+        gameCharacter.setOrigin(Align.center)
+        applyIdleAnimationOnCharacter(gameCharacter)
         return gameCharacter
+    }
+
+    private fun applyIdleAnimationOnCharacter(gameCharacter: GameCharacter) {
+        val randomDirection = MathUtils.randomSign()
+        val randomIdleStepMoveBySize = MathUtils.random(IDLE_STEP_MOVE_BY - 5F, IDLE_STEP_MOVE_BY)
+        val randomIdleStepMoveByDuration = MathUtils.random(1F, 2F)
+        gameCharacter.addAction(
+            Actions.parallel(
+                Actions.forever(
+                    Actions.sequence(
+                        Actions.scaleBy(
+                            0F,
+                            0.1F,
+                            IDLE_STEP_SHRINK_DURATION,
+                            IDLE_STEP_SHRINK_INTERPOLATION
+                        ),
+                        Actions.scaleBy(
+                            0F,
+                            -0.1F,
+                            IDLE_STEP_SHRINK_DURATION,
+                            IDLE_STEP_SHRINK_INTERPOLATION
+                        ),
+                        Actions.scaleBy(
+                            0F,
+                            -0.1F,
+                            IDLE_STEP_SHRINK_DURATION,
+                            IDLE_STEP_SHRINK_INTERPOLATION
+                        ),
+                        Actions.scaleBy(
+                            0F,
+                            0.1F,
+                            IDLE_STEP_SHRINK_DURATION,
+                            IDLE_STEP_SHRINK_INTERPOLATION
+                        ),
+                    )
+                ),
+                Actions.forever(
+                    Actions.sequence(
+                        Actions.moveBy(
+                            0F,
+                            randomDirection * -randomIdleStepMoveBySize,
+                            randomIdleStepMoveByDuration,
+                            IDLE_STEP_MOVE_BY_INTERPOLATION
+                        ),
+                        Actions.moveBy(
+                            0F,
+                            randomDirection * randomIdleStepMoveBySize * 2F,
+                            randomIdleStepMoveByDuration,
+                            IDLE_STEP_MOVE_BY_INTERPOLATION
+                        ),
+                        Actions.moveBy(
+                            0F,
+                            randomDirection * -randomIdleStepMoveBySize,
+                            randomIdleStepMoveByDuration,
+                            IDLE_STEP_MOVE_BY_INTERPOLATION
+                        )
+                    )
+                )
+            )
+        )
     }
 
     override fun render(delta: Float) {
@@ -162,18 +237,22 @@ class GameScreen(private val assetsManager: GameAssetManager) : Screen, InputPro
     }
 
     override fun touchUp(screenX: Int, screenY: Int, pointer: Int, button: Int): Boolean {
-        if (draggedCharacter != null) {
-            draggedCharacter!!.clearActions()
-            draggedCharacter!!.addAction(
-                Actions.moveTo(
-                    draggedCharacter!!.startX,
-                    draggedCharacter!!.startY,
-                    3F,
-                    Interpolation.exp5
-                )
+        if (this.draggedCharacter != null) {
+            val draggedCharacter = draggedCharacter!!
+            draggedCharacter.clearActions()
+            draggedCharacter.addAction(
+                Actions.sequence(
+                    Actions.moveTo(
+                        draggedCharacter.startX,
+                        draggedCharacter.startY,
+                        3F,
+                        Interpolation.exp5
+                    ),
+                    Actions.run { applyIdleAnimationOnCharacter(draggedCharacter) }
+                ),
             )
         }
-        draggedCharacter = null
+        this.draggedCharacter = null
         return true
     }
 
@@ -199,16 +278,54 @@ class GameScreen(private val assetsManager: GameAssetManager) : Screen, InputPro
                     )
                 )
             ) {
-                draggedCharacter!!.remove()
-                draggedCharacter!!.carrier.remove()
-                carriers.remove(draggedCharacter!!.characterColor)
-                draggedCharacter = null
-                if (carriers.isEmpty()) {
-                    startGame()
-                }
+                characterAppliedOnHisColor()
             }
         }
         return handled
+    }
+
+    private fun characterAppliedOnHisColor() {
+        draggedCharacter!!.applied = true
+        val carrier = carriers[draggedCharacter!!.characterColor]
+        draggedCharacter!!.addAction(characterExitSequence(carrier!!, draggedCharacter!!))
+        draggedCharacter = null
+    }
+
+    private fun characterExitSequence(
+        carrier: GameCharacter,
+        ball: DraggedCharacter
+    ): SequenceAction =
+        Actions.sequence(
+            Actions.moveTo(
+                carrier.x + carrier.width / 2F - ball.width / 2F,
+                carrier.y + carrier.height / 2F - ball.height / 2F + CARRIED_Y_BIAS,
+                2F,
+                Interpolation.swing
+            ),
+            Actions.run {
+                carrier.addAction(
+                    Actions.sequence(
+                        Actions.moveBy(
+                            Gdx.graphics.width + carrier.width * 2F,
+                            0F,
+                            2F,
+                            Interpolation.smoother
+                        ),
+                        Actions.run {
+                            removeDraggedCharacterAndCarrier(ball)
+                            if (carriers.isEmpty()) {
+                                startGame()
+                            }
+                        }
+                    )
+                )
+            }
+        )
+
+    private fun removeDraggedCharacterAndCarrier(character: DraggedCharacter) {
+        character.remove()
+        character.carrier.remove()
+        carriers.remove(character.characterColor)
     }
 
     private fun getBoundingRectangle(actor: Actor, output: Rectangle): Rectangle {
@@ -232,5 +349,9 @@ class GameScreen(private val assetsManager: GameAssetManager) : Screen, InputPro
         private const val BOUNDING_BOX_PADDING: Int = 100
         private val auxRect1 = Rectangle()
         private val auxRect2 = Rectangle()
+        private const val IDLE_STEP_SHRINK_DURATION = 3F
+        private val IDLE_STEP_SHRINK_INTERPOLATION = Interpolation.smoother
+        private const val IDLE_STEP_MOVE_BY = 10F
+        private val IDLE_STEP_MOVE_BY_INTERPOLATION = Interpolation.smoother
     }
 }
